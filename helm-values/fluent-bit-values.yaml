@@ -1,0 +1,13 @@
+config:
+  outputs: |
+    [OUTPUT]
+        Name es
+        Match *
+        Host ''
+        Cloud_auth ''
+        Cloud_id ''
+        Port 9243
+        Index 'your index name'
+        Suppress_Type_Name On
+        tls On
+        tls.verify Off
