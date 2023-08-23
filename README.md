@@ -1,3 +1,44 @@
+# Table of contents
+
+- [Introduction](#introduction)
+- [Requirments](#requirments)
+- [Note](#note)
+- [Implementation](#implementation)
+  * [Logs](#logs)
+    + [EFK stack](#efk-stack)
+    + [PLG stack](#plg-stack)
+    + [Bonus Loki & fluent-bit](#bonus)
+  * [Metrics](#metrics)
+    + [kube-prometheus-stack](#kube-prometheus-stack)
+    + [prometheus-community/prometheus](#prometheus-community)
+  * [Traces](#traces)
+    + [Jaeger](#jaeger)
+
+# Introduction
+
+The kubernetes observability consists of 3 main *pillars*:
+- Logs
+- Metrics 
+- Traces
+
+**Logs** are used for providing a record of events and activities within the system, such as application logs, system logs, and network logs
+
+**Metrics** are used for providing a quantitative measurement of various aspects of the system, such as resource utilization, system performance, and application behavior.
+
+**Traces** are used for providing visibility into the flow of requests and the dependencies between different components in a system. Tracing helps to identify performance bottlenecks and diagnose issues.
+
+The aim of observability is to solve customer issues quickly. Creating monitoring dashboards is useless if it can’t help engineering teams quickly identify the root causes of performance issues.
+
+A modern distributed software system has a lot of moving components. So while setting up monitoring, you might not know what answers you would need to solve an issue.
+
+Observability enables application owners to get answers to any question that might arise while debugging application issues.
+
+<div align="center">
+    <img alt="obvervability image" src="https://d33wubrfki0l68.cloudfront.net/cda031488c05ef4d485de8d1c4ff65b888bd1f0d/93ea5/img/blog/2023/03/o11y-net-trans.png" />
+</div>
+
+
+
 # Requirments
 
 - Kubernetes cluster
@@ -24,28 +65,9 @@ yc managed-kubernetes cluster get-credentials observability-k8s --external
 
 # Implementation
 
-The kubernetes observability consists of 3 main *pillars*:
-- Logs
-- Metrics 
-- Traces
-
-**Logs** are used for providing a record of events and activities within the system, such as application logs, system logs, and network logs
-
-**Metrics** are used for providing a quantitative measurement of various aspects of the system, such as resource utilization, system performance, and application behavior.
-
-**Traces** are used for providing visibility into the flow of requests and the dependencies between different components in a system. Tracing helps to identify performance bottlenecks and diagnose issues.
-
-The aim of observability is to solve customer issues quickly. Creating monitoring dashboards is useless if it can’t help engineering teams quickly identify the root causes of performance issues.
-
-A modern distributed software system has a lot of moving components. So while setting up monitoring, you might not know what answers you would need to solve an issue.
-
-Observability enables application owners to get answers to any question that might arise while debugging application issues.
-
-<div align="center">
-    <img alt="obvervability image" src="https://d33wubrfki0l68.cloudfront.net/cda031488c05ef4d485de8d1c4ff65b888bd1f0d/93ea5/img/blog/2023/03/o11y-net-trans.png" />
-</div>
-
 ## Logs
+
+[Back to top](#)
 
 For setting up classical logs processing we need the following components:
 - Log shipper
@@ -55,6 +77,8 @@ For setting up classical logs processing we need the following components:
 There are 2 main stacks right now for implementing `Kubernetes` logging: EFK and PLG. In this setup I'll show both of them, if you need more info about particular stack I suggest this [comparison](https://www.infracloud.io/blogs/logging-in-kubernetes-efk-vs-plg-stack/)
 
 ### EFK stack
+
+[Back to top](#)
 
 - Fluent-bit - log shipper
 - ElasticSearch - log aggregation system
@@ -115,6 +139,8 @@ After a little while logs will be delivered to the elastic cloud
 
 ### PLG stack
 
+[Back to top](#)
+
 - promtail - log shipper
 - Loki - log aggregation system
 - Grafana - data visualization tool
@@ -168,7 +194,9 @@ And if we execute `{job="default/pi"}` we can see that loki shipped logs from pi
 
 ![pi loki](./docs/images/plg/pi-output.jpeg)
 
-### Bonus Loki + fluent-bit
+### Bonus
+
+[Back to top](#)
 
 Repeat the steps from `EFK` repository and upgrade loki helm release using this command
 
@@ -193,6 +221,8 @@ Now let's query our `Elastic Cloud` and `Loki`
 
 ## Metrics
 
+[Back to top](#)
+
 For setting up classical metrics monitoring we need the following components:
 - Prometheus
 - Grafana 
@@ -210,7 +240,9 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 helm repo update
 ```
 
-## kube-prometheus-stack
+### kube-prometheus-stack
+
+[Back to top](#)
 
 By default besides `Prometheus` kube-prometheus-stack chart installs additional, dependent charts:
 - prometheus-community/kube-state-metrics
@@ -265,7 +297,9 @@ For example let's inspect `Kubernetes / API server` group
 
 For more info and availiable options you can visit `kube-prometheus-stack` artifacthub [here](https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack)
 
-## prometheus-community/prometheus
+### prometheus-community
+
+[Back to top](#)
 
 By default besides `Prometheus` prometheus-community/prometheus chart installs additional, dependent charts:
 - prometheus-community/kube-state-metrics
@@ -354,6 +388,75 @@ That's all, now we have prometheus / grafana up and running inside a kubernetes 
 
 ***This chart isn't contains grafana and ton of grafana dashboards as `kube-prometheus-stack` do, but still it's an a good option***
 
-## Traces 
+## Traces
 
-// TODO:
+[Back to top](#)
+
+Add `jaeger` helm repository:
+
+```bash
+helm repo add jaegertracing https://jaegertracing.github.io/helm-charts
+```
+
+### Jaeger
+
+[Back to top](#)
+
+For tracing setup I'll be using `jaeger` as trace exporter. All availiable exporters and also docs for `OpenTelemetry` you can find [here](https://opentelemetry.io/docs/instrumentation/js/exporters/).
+
+***NOTE: Jaeger has 2 main data stores `ElasticSearch` and `Cassandra` (default). You can use either Cassandra or ElasticSearch data store. In this setup I'll be using `Cassandra` as main data store. For more info see: https://artifacthub.io/packages/helm/jaegertracing/jaeger#installing-the-chart-using-a-new-elasticsearch-cluster***
+
+For installing `jaeger` run the following command:
+
+```bash
+helm install jaeger jaegertracing/jaeger
+```
+
+![jaeger install](./docs/images/jaeger/jaeger-install.jpeg)
+
+After a little while all pods should be up and running
+
+![jaeger pods](./docs/images/jaeger/jaeger-pods.jpeg)
+
+For accessing `jaeger` ui do port-forward by executing commands down below
+
+```bash
+export POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/instance=jaeger,app.kubernetes.io/component=query" -o jsonpath="{.items[0].metadata.name}")
+kubectl port-forward --namespace default $POD_NAME 8080:16686 1>/dev/null &
+```
+
+Now you can access `jaeger` ui on `localhost:8080`
+
+![jaeger ui](./docs/images/jaeger/jaeger-ui.jpeg)
+
+For example application we deploy my demo python app. Clone it and apply all manifests using `Kustomize`
+
+```bash
+git clone https://github.com/fayvori/python-otel-demo.git
+cd python-otel-demo
+kubectl create namespace otel-demo
+kubectl apply -n otel-demo -k manifests
+```
+
+This is simple flask application which is returned dice roll on path `/rolldice`. We also port-forward it to our local host
+
+```bash
+kubectl port-forward -n otel-demo svc/flask-otel-service 5000:5000 2>/dev/null &
+```
+
+![python roll-dice](./docs/images/jaeger/python-rolldice.jpeg)
+
+Go to `localhost:5050/rolldice` and refresh page couple times. Also we can simulate timeouts by providing `?sleep` argument. (e.g. `localhost:5050/rolldice?sleep={duration}`, default is 0)
+
+Return to `jaeger` ui and select `python.dice` in `Service` field and `do_roll` in `Operation` field
+
+![jaeger rolldict](./docs/images/jaeger/roll-dice-jaeger.jpeg)
+
+Our traces successfully dilivered to the `Jaeger`.
+
+**Don't forget to kill all the background jobs when you're done**
+
+```bash
+kill %1
+kill %2
+```
